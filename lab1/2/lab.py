@@ -170,7 +170,7 @@ with open('ex1data2.txt', 'r') as data_file:
 
 
 # ------------        gm solution         ---------
-# ------------        time elapsed: 0:00:25.165609s ------
+# ------------        time elapsed: 0:00:34.703448s ------
 #normalize_x(x)
 #start = timer()
 #o, its, its_hist, err_hist = gd(x, y)
@@ -204,7 +204,7 @@ with open('ex1data2.txt', 'r') as data_file:
 
 # https://towardsdatascience.com/vectorization-implementation-in-machine-learning-ca652920c55d
 # ------------        gm vectorized         ---------
-# ------------        time elapsed: 0:00:26.976847s ------
+# ------------        time elapsed: 0:00:25.165609s ------
 #x_np = np.matrix(x)
 #y_np = np.matrix(y)
 #normalize_x_np(x_np)
