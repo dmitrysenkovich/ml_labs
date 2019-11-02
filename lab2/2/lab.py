@@ -8,8 +8,10 @@ from datetime import timedelta
 import scipy.optimize as optimize
 from sympy import *
 
-alpha = 0.01
-max_error = 0.356
+# at first max error is 0.45 starting with l = 1 max errors are 0.53, 0.6482157015, 0.6864838338726167, 0.6923102938884204
+alpha = 0.001
+l = 1000
+max_error = 0.6923102938884204
 o_to_pow = []
 hypothesis_x = []
 hypothesis_x_transposed = []
@@ -24,21 +26,25 @@ def h(ot):
 
 def j(m, ot):
 	h_val = h(ot)
-	return (-yt.dot(np.log(h_val)) - (1 - yt).dot(np.log(1 - h_val)))[0].item(0) / m
+	return ((-yt.dot(np.log(h_val)) - (1 - yt).dot(np.log(1 - h_val)))[0].item(0) / m) + np.sum(np.power(ot[1:], 2))*l/(2*m)
 
 def j_scipy(o, x, y):
 	h_val = h(o.reshape(-1, 1))
 	m = hypothesis_x.shape[0]
-	return ((-yt.dot(np.log(h_val)) - (1 - yt).dot(np.log(1 - h_val))))[0].item(0) / m
+	return ((-yt.dot(np.log(h_val)) - (1 - yt).dot(np.log(1 - h_val)))[0].item(0) / m) + np.sum(np.power(o[1:], 2))*l/(2*m)
 
 def j_o_der(m, ot):
 	h_vec_val = h(ot)
-	return (hypothesis_x_transposed.dot(h_vec_val - yt.reshape(-1, 1))) / m
+	ot_restricted = np.copy(ot)
+	ot_restricted[0][0] = 0
+	return ((hypothesis_x_transposed.dot(h_vec_val - y)) / m) + ot_restricted*l/m
 
 def j_o_der_scipy(o, x, y):
 	h_vec_val = h(o.reshape(-1, 1))
 	m = hypothesis_x.shape[0]
-	return (hypothesis_x_transposed.dot(h_vec_val - y.reshape(-1, 1)) / m).flatten()
+	o_restricted = np.copy(o).reshape(-1, 1)
+	o_restricted[0] = 0
+	return ((hypothesis_x_transposed.dot(h_vec_val - y.reshape(-1, 1)) / m) + o_restricted*l/m).flatten()
 
 def update_o(m, ot):
 	j_oi_der_val = j_o_der(m, ot)
@@ -53,6 +59,7 @@ def gd():
 	print('m %s' % m)
 	its_hist = []
 	err_hist = []
+	print(j(m, ot))
 	while error > max_error:
 		ot = update_o(m, ot)
 		error = j(m, ot)
@@ -91,9 +98,10 @@ def normalize_x(x):
 
 def optimize_scipy(algorithm):
 	o = np.zeros((28, 1))
-	Result = optimize.minimize(fun=j_scipy, x0=o, args=(hypothesis_x, y), method=algorithm, jac=j_o_der_scipy, options={'maxiter': 6000000})
+	Result = optimize.minimize(fun=j_scipy, x0=o, args=(hypothesis_x, y), method=algorithm, jac=j_o_der_scipy, options={'maxiter': 10000000})
 	o = Result.x
 	print("o %s " % o)
+	return o
 
 def calc_o_to_pow():
 	for i in range(7):
@@ -111,7 +119,7 @@ def calc_hypothesis_x_row(xi):
 	for pow in o_to_pow:
 		i = pow[0]
 		j = pow[1]
-		row.append((xi[1]**i)*(xi[2]**j))
+		row.append((xi[0]**i)*(xi[1]**j))
 	return row
 
 # ------------        read data         ---------
@@ -120,7 +128,7 @@ y = []
 with open('ex2data2.txt', 'r') as data_file:
 	for line in data_file:
 		data_i = [float(x) for x in line.split(',')]
-		x.append([1, data_i[0], data_i[1]])
+		x.append([data_i[0], data_i[1]])
 		y.append(data_i[2])
 # ------------        read data         ---------
 
@@ -138,9 +146,9 @@ with open('ex2data2.txt', 'r') as data_file:
 
 # ------------        precalculating matricies for gradient and hypothesis calculation         ---------
 x = np.array(x)
-y = np.array(y)
-yt = y.reshape(-1, 1).transpose()
-normalize_x(x)
+y = np.array(y).reshape(-1, 1)
+yt = y.transpose()
+#normalize_x(x)
 calc_o_to_pow()
 calc_hypothesis_x(x)
 hypothesis_x = np.array(hypothesis_x)
@@ -151,20 +159,41 @@ hypothesis_x_transposed = hypothesis_x.transpose()
 
 # ------------        gm solution      ---------
 # ------------        time elapsed: 0:00:34.703448s ------
-# start = timer()
-# o, its, its_hist, err_hist = gd()
-# end = timer()
-# print(timedelta(seconds=end-start))
-# print('its %s' % its)
-# print('o %s' % o)
+start = timer()
+o, its, its_hist, err_hist = gd()
+end = timer()
+print(timedelta(seconds=end-start))
+np.set_printoptions(suppress=True)
+print('its %s' % its)
+print('o %s' % o)
 # ------------        gm solution         ---------
 
 
 # ------------        scipy   BFGS      ---------
-optimize_scipy('BFGS')
+# o = optimize_scipy('BFGS')
 # ------------        scipy    BFGS     ---------
 
 
 # ------------        scipy   Nelder-Mead      ---------
-# optimize_scipy('Nelder-Mead')
+# o = optimize_scipy('Nelder-Mead')
 # ------------        scipy    Nelder-Mead     ---------
+
+
+
+# ------------        plot predictions vs initial data     ---------
+t = np.linspace(-1, 1.25, 100)
+asd = []
+for tt in t:
+	for ttt in t:
+		asd.append([tt, ttt])
+t = np.array(asd)
+hypothesis_x = []
+calc_hypothesis_x(t)
+hypothesis_x = np.array(hypothesis_x)
+values = sigmoid(hypothesis_x.dot(o)) >= 0.5
+colors_v = ['blue' if val else 'yellow' for val in values]
+plt.scatter(t[:,0], t[:,1], c=colors_v)
+colors = ['green' if val else 'red' for val in y]
+plt.scatter(x[:,0], x[:,1], c=colors)
+plt.show()
+# ------------        plot predictions vs initial data     ---------
