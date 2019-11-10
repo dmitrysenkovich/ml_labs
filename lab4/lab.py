@@ -219,68 +219,68 @@ wt = [w0.transpose(), w1.transpose()]
 
 
 # ------------        best lambda        ---------
-# best_lambda 0.03, min_error 0.2242020781798844
-# best_lambda 0.14, max_success_rate 97.98
-# m = x.shape[0]
-# lambdas = np.linspace(0.01, 0.5, 50)
-# errors = []
-# success_rates = []
-# yoh = to_one_hot(y, 10)
-# for l in lambdas:
-# 	rand_w = [build_randomized_weights(w0.shape), build_randomized_weights(w1.shape)]
-# 	unrolled_w = unroll(rand_w)
-# 	unrolled_optimal_w, error, func_calls, grad_calls, warnflag = optimize.fmin_cg(maxiter=50, f=cost, x0=unrolled_w, fprime=back_propagation, args=(x, yoh, l), disp=True, full_output=true)
-# 	optimal_w = from_unrolled(unrolled_optimal_w, weight_sizes)
-# 	errors.append(error)
-#
-# 	optimal_wt = [optimal_w[0].transpose(), optimal_w[1].transpose()]
-# 	output = hypothesis(x, optimal_wt)
-# 	predictions = [np.argmax(probabilities) + 1 for probabilities in output]
-#
-# 	success_count = 0
-# 	m = x.shape[0]
-# 	for i in range(m):
-# 		prediction_i = predictions[i]
-# 		yi = y[i, 0]
-# 		if yi == prediction_i:
-# 			success_count += 1
-#
-# 	success_rates.append(((success_count / m)*100))
-#
-# best_lambda_index = np.argmin(errors)
-# best_lambda = lambdas[best_lambda_index]
-# min_error = errors[best_lambda_index]
-# print("best_lambda %s, min_error %s" % (best_lambda, min_error))
-# plt.plot(lambdas, errors, c="r")
-# plt.show()
-# best_lambda_index_by_success_rate = np.argmax(success_rates)
-# best_lambda = lambdas[best_lambda_index_by_success_rate]
-# max_success_rate = success_rates[best_lambda_index_by_success_rate]
-# print("best_lambda %s, max_success_rate %s" % (best_lambda, max_success_rate))
-# plt.plot(lambdas, success_rates, c="r")
-# plt.show()
+# best_lambda 0.01, min_error 0.22414151001198537
+# best_lambda 0.42000000000000004, max_success_rate 97.74000000000001
+m = x.shape[0]
+lambdas = np.linspace(0.01, 0.5, 50)
+errors = []
+success_rates = []
+yoh = to_one_hot(y, 10)
+for l in lambdas:
+	rand_w = [build_randomized_weights(w0.shape), build_randomized_weights(w1.shape)]
+	unrolled_w = unroll(rand_w)
+	unrolled_optimal_w, error, func_calls, grad_calls, warnflag = optimize.fmin_cg(maxiter=50, f=cost, x0=unrolled_w, fprime=back_propagation, args=(x, yoh, l), disp=True, full_output=true)
+	optimal_w = from_unrolled(unrolled_optimal_w, weight_sizes)
+	errors.append(error)
+
+	optimal_wt = [optimal_w[0].transpose(), optimal_w[1].transpose()]
+	output = hypothesis(x, optimal_wt)
+	predictions = [np.argmax(probabilities) + 1 for probabilities in output]
+
+	success_count = 0
+	m = x.shape[0]
+	for i in range(m):
+		prediction_i = predictions[i]
+		yi = y[i, 0]
+		if yi == prediction_i:
+			success_count += 1
+
+	success_rates.append(((success_count / m)*100))
+
+best_lambda_index = np.argmin(errors)
+best_lambda = lambdas[best_lambda_index]
+min_error = errors[best_lambda_index]
+print("best_lambda %s, min_error %s" % (best_lambda, min_error))
+plt.plot(lambdas, errors, c="r")
+plt.show()
+best_lambda_index_by_success_rate = np.argmax(success_rates)
+best_lambda = lambdas[best_lambda_index_by_success_rate]
+max_success_rate = success_rates[best_lambda_index_by_success_rate]
+print("best_lambda %s, max_success_rate %s" % (best_lambda, max_success_rate))
+plt.plot(lambdas, success_rates, c="r")
+plt.show()
 #------------        best lambda        ---------
 
 
 
 # ------------        visualize        ---------
-yoh = to_one_hot(y, 10)
-rand_w = [build_randomized_weights(w0.shape), build_randomized_weights(w1.shape)]
-unrolled_w = unroll(rand_w)
-unrolled_optimal_w = optimize.fmin_cg(maxiter=50, f=cost, x0=unrolled_w, fprime=back_propagation, args=(x, yoh, 75), disp=True)
-optimal_w = from_unrolled(unrolled_optimal_w, weight_sizes)
-
-optimal_wt = [optimal_w[0].transpose(), optimal_w[1].transpose()]
-output = hypothesis(x, optimal_wt)
-predictions = [np.argmax(probabilities) + 1 for probabilities in output]
-
-success_count = 0
-m = x.shape[0]
-for i in range(m):
-	prediction_i = predictions[i]
-	yi = y[i, 0]
-	if yi == prediction_i:
-		success_count += 1
-print("success rate: %s" % ((success_count / m)*100))
-visualize(optimal_w[0][:, 1:])
+# yoh = to_one_hot(y, 10)
+# rand_w = [build_randomized_weights(w0.shape), build_randomized_weights(w1.shape)]
+# unrolled_w = unroll(rand_w)
+# unrolled_optimal_w = optimize.fmin_cg(maxiter=50, f=cost, x0=unrolled_w, fprime=back_propagation, args=(x, yoh, 75), disp=True)
+# optimal_w = from_unrolled(unrolled_optimal_w, weight_sizes)
+#
+# optimal_wt = [optimal_w[0].transpose(), optimal_w[1].transpose()]
+# output = hypothesis(x, optimal_wt)
+# predictions = [np.argmax(probabilities) + 1 for probabilities in output]
+#
+# success_count = 0
+# m = x.shape[0]
+# for i in range(m):
+# 	prediction_i = predictions[i]
+# 	yi = y[i, 0]
+# 	if yi == prediction_i:
+# 		success_count += 1
+# print("success rate: %s" % ((success_count / m)*100))
+# visualize(optimal_w[0][:, 1:])
 # ------------        visualize        ---------
