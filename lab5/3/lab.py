@@ -9,278 +9,80 @@ import scipy.optimize as optimize
 from sympy import *
 from scipy.io import loadmat
 import pandas as pd
+from sklearn.svm import SVC
+from datetime import timedelta
 
-alpha = 0.0001
-l = 0
-weight_sizes = [[25, 401], [10, 26]]
+def plot_data(x, y):
+	colors = ['green' if val else 'red' for val in y]
+	plt.scatter(x[:, 0], x[:, 1], c=colors)
 
-def sigmoid(z):
-	return 1.0 / (1 + np.exp(-z))
+def plot_nonlinear_decision_boundary(svclassifier, x, y):
+	x_min, x_max = x[:, 0].min(), x[:, 0].max()
+	y_min, y_max = x[:, 1].min(), x[:, 1].max()
+	ax = np.linspace(x_min, x_max, 1000)
+	ay = np.linspace(y_min, y_max, 1000)
+	xx = np.array([(axx, ayy) for axx in ax for ayy in ay])
 
-def hypothesis(x, wt):
-	a1 = np.column_stack([[1]*(x.shape[0]), x])
+	xx_predictions = svclassifier.predict(xx)
+	colors = ['blue' if prediction else 'yellow' for prediction in xx_predictions]
+	plt.scatter(xx[:, 0], xx[:, 1], c=colors, s = 5)
 
-	z2 = a1.dot(wt[0])
-	a2 = sigmoid(z2)
-	a2 = np.column_stack([[1]*(a2.shape[0]), a2])
-
-	h = sigmoid(a2.dot(wt[1]))
-
-	return h
-
-def to_one_hot(y, size):
-	converted = []
-	for i in range(y.shape[0]):
-		converted_i = [0] * size
-		yi = y[i, 0]
-		converted_i[yi - 1] = 1
-		converted.append(converted_i)
-	return np.array(converted)
-
-def regularization_part(wt, m, l):
-	weights_sum = regularization_weights_sum(wt[0]) + regularization_weights_sum(wt[1])
-	return weights_sum * l / (2 * m)
-
-def regularization_weights_sum(wt):
-	return np.sum(np.power(wt, 2))
-
-def cost(unrolled_weights, x, y, l):
-	w = from_unrolled(unrolled_weights, weight_sizes)
-	wt = [w[0].transpose(), w[1].transpose()]
-
-	calculated_hypothesis = hypothesis(x, wt)
-	m = x.shape[0]
-
-	cost_first_part = np.multiply(y, np.log(calculated_hypothesis))
-	cost_second_part = np.multiply(1 - y, np.log(1-calculated_hypothesis))
-
-	return np.sum(cost_first_part + cost_second_part) / -m + regularization_part(wt, m, l)
-
-def activation_derivative(al):
-	return np.multiply(al, (1 - al))
-
-def build_randomized_weights(size):
-	eps = 1
-	return np.random.rand(size[0], size[1]) * (2*eps) - eps
-
-def back_propagation(unrolled_weights, x, y, l):
-	w = from_unrolled(unrolled_weights, weight_sizes)
-	delta1 = np.zeros(w[0].shape)
-	delta2 = np.zeros(w[1].shape)
-	w1 = w[0]
-	w2 = w[1]
-	wt1 = w1.transpose()
-	wt2 = w2.transpose()
-	x = np.column_stack([[1]*(x.shape[0]), x])
-
-	for i in range(x.shape[0]):
-		a1 = x[i].reshape(-1, 1).T
-
-		z2 = a1.dot(wt1)
-		a2 = sigmoid(z2)
-		a2 = np.insert(a2, 0, [1])
-
-		a3 = sigmoid(a2.dot(wt2))
-		yi = y[i]
-
-		d3 = a3 - yi
-		d2 = np.multiply(wt2.dot(d3), activation_derivative(a2))
-
-		delta2 += d3.reshape(-1, 1).dot(a2.reshape(-1, 1).T)
-		delta1 += d2.reshape(-1, 1)[1:, :].dot(a1)
-
-	m = x.shape[0]
-	delta1 /= m
-	delta2 /= m
-	delta1[:, 1:] = delta1[:, 1:] + l*w1[:, 1:]/m
-	delta2[:, 1:] = delta2[:, 1:] + l*w2[:, 1:]/m
-
-	return unroll([delta1, delta2])
-
-def unroll(matricies):
-	return np.hstack((matricies[0].ravel(order='F'), matricies[1].ravel(order='F')))
-
-def from_unrolled(unrolled, sizes):
-	first_matrix = np.reshape(unrolled[:sizes[0][0]*sizes[0][1]], sizes[0], order = 'F')
-	second_matrix = np.reshape(unrolled[sizes[0][0]*sizes[0][1]:], sizes[1], order = 'F')
-	return [first_matrix, second_matrix]
-
-def gradient_checking(w, x, y, unrolled_delta, l):
-	unrolled_w = unroll(w)
-	n = len(unrolled_w)
-	eps = 10**(-4)
-	for _ in range(5):
-		theta_index = int(np.random.rand() * n)
-		theta_value = unrolled_w[theta_index]
-
-		unrolled_w[theta_index] = theta_value + eps
-		cost_above_derivative = cost(unrolled_w, x, y, l)
-
-		unrolled_w[theta_index] = theta_value - eps
-		cost_under_derivative = cost(unrolled_w, x, y, l)
-
-		approximated_gradient = (cost_above_derivative - cost_under_derivative) / float(2 * eps)
-		print('approximated gradient: %s, back propagation gradient: %s' % (approximated_gradient, unrolled_delta[theta_index]))
-
-def visualize(w1):
-	sample_width = 20
-	plot_dim = 5
-
-	fig, axises = plt.subplots(plot_dim, plot_dim, figsize=(10, 10))
-	axises = axises.ravel()
-
-	for i in range(axises.shape[0]):
-		axis = axises[i]
-		axis.imshow(w1[i].reshape(sample_width, sample_width, order='F'), cmap='gray')
-		axis.axis('off')
+	plot_data(x, y)
 
 	plt.show()
 
-# ------------        read data         ---------
-data = loadmat("ex4data1.mat")
-x = data['X']
-y = data['y']
+if __name__ == "__main__":
 
-weights_data = loadmat("ex4weights.mat")
-w0 = weights_data['Theta1']
-w1 = weights_data['Theta2']
-wt = [w0.transpose(), w1.transpose()]
-# number of hidden layers: 2
-# size of the first layer (input layer): 400 + 1
-# size of the second layer (1st hidden): 25 + 1
-# size of the third layer (output layer): 10
-# ------------        read data         ---------
+	# ------------        read data         ---------
+	data = loadmat("ex5data3.mat")
+	x = data['X']
+	y = data['y']
+	x_val = data['Xval']
+	y_val = data['yval']
+	# ------------        read data         ---------
 
 
 
-
-# ------------        predict         ---------
-# wt = [w0.transpose(), w1.transpose()]
-# output = hypothesis(x, wt)
-# predictions = [np.argmax(probabilities) + 1 for probabilities in output]
-#
-# success_count = 0
-# m = x.shape[0]
-# for i in range(m):
-# 	prediction_i = predictions[i]
-# 	yi = y[i, 0]
-# 	if yi == prediction_i:
-# 		success_count += 1
-# print("success rate: %s" % ((success_count / m)*100)) # 97.52 vs 95.28 in logistic regression
-# ------------        predict         ---------
+	# ------------        plot data         ---------
+	# plot_data(x_val, y_val)
+	# plt.show()
+	# ------------        plot data         ---------
 
 
 
-# ------------        one hot         ---------
-# yoh = to_one_hot(y, 10)
-# initial_cost = cost(unroll([w0, w1]), x, yoh, 0)
-# print(initial_cost)
-# rand_w = build_randomized_weights([3, 2])
-# print(rand_w)
-# ------------        one hot         ---------
+	# ------------        searching for the best C and sigma squared        ---------
+	# number_of_C_samples = 100
+	# number_of_gamma_samples = 100
+	# C_to_check = np.linspace(0.1, 100, number_of_C_samples)
+	# gamma_to_check = np.linspace(0.01, 1, number_of_gamma_samples)
+	# best_C = -1
+	# best_sigma_squared = -1
+	# best_score = -1
+	# curr_model_number = 0
+	# for C in C_to_check:
+	# 	for gamma in gamma_to_check:
+	# 		classifier = SVC(C=C, gamma=gamma, kernel='rbf')
+	# 		classifier.fit(x, y.flatten())
+	# 		score = classifier.score(x_val, y_val.flatten())
+	# 		if score > best_score:
+	# 			best_score = score
+	# 			best_C = C
+	# 			best_sigma_squared = 1 / (2*gamma)
+	# 		curr_model_number += 1
+	# 		if curr_model_number % 1000 == 0:
+	# 			print(curr_model_number)
+	# print('best_C %s, best_sigma_squared %s, best_score %s' % (best_C, best_sigma_squared, best_score))
+	# best_C 1.1090909090909091, best_sigma_squared 0.6329113924050632, best_score 0.945
+	# ------------        searching for the best C and sigma squared        ---------
 
 
 
+	# ------------        validation sample and approximation with best parameters         ---------
+	best_C = 1.1090909090909091
+	best_sigma_squared = 0.6329113924050632
+	gamma = 1 / (2*best_sigma_squared)
+	svclassifier = SVC(C=best_C, gamma=gamma, kernel='rbf')
+	svclassifier.fit(x, y.flatten())
+	plot_nonlinear_decision_boundary(svclassifier, x_val, y_val)
+	# ------------        validation sample and approximation with best parameters         ---------
 
-
-# ------------        back propagation test         ---------
-# yoh = to_one_hot(y, 10)
-# rand_w = [build_randomized_weights(w0.shape), build_randomized_weights(w1.shape)]
-# unrolled_delta = back_propagation(unroll(rand_w), x, yoh, l)
-# gradient_checking(rand_w, x, yoh, unrolled_delta, 0)
-# ------------        back propagation test         ---------
-
-
-
-
-
-# ------------        train and check network          ---------
-# yoh = to_one_hot(y, 10)
-# rand_w = [build_randomized_weights(w0.shape), build_randomized_weights(w1.shape)]
-# unrolled_w = unroll(rand_w)
-# unrolled_optimal_w = optimize.fmin_cg(maxiter=50, f=cost, x0=unrolled_w, fprime=back_propagation, args=(x, yoh, 1), disp=True)
-# optimal_w = from_unrolled(unrolled_optimal_w, weight_sizes)
-#
-# optimal_wt = [optimal_w[0].transpose(), optimal_w[1].transpose()]
-# output = hypothesis(x, optimal_wt)
-# predictions = [np.argmax(probabilities) + 1 for probabilities in output]
-#
-# success_count = 0
-# m = x.shape[0]
-# for i in range(m):
-# 	prediction_i = predictions[i]
-# 	yi = y[i, 0]
-# 	if yi == prediction_i:
-# 		success_count += 1
-# print("success rate: %s" % ((success_count / m)*100)) # 95.7 with 50 iterations and regularization 1
-# ------------        train and check network          ---------
-
-
-
-
-# ------------        best lambda        ---------
-# best_lambda 0.01, min_error 0.22414151001198537
-# best_lambda 0.42000000000000004, max_success_rate 97.74000000000001
-# m = x.shape[0]
-# lambdas = np.linspace(0.01, 0.5, 50)
-# errors = []
-# success_rates = []
-# yoh = to_one_hot(y, 10)
-# for l in lambdas:
-# 	rand_w = [build_randomized_weights(w0.shape), build_randomized_weights(w1.shape)]
-# 	unrolled_w = unroll(rand_w)
-# 	unrolled_optimal_w, error, func_calls, grad_calls, warnflag = optimize.fmin_cg(maxiter=50, f=cost, x0=unrolled_w, fprime=back_propagation, args=(x, yoh, l), disp=True, full_output=true)
-# 	optimal_w = from_unrolled(unrolled_optimal_w, weight_sizes)
-# 	errors.append(error)
-#
-# 	optimal_wt = [optimal_w[0].transpose(), optimal_w[1].transpose()]
-# 	output = hypothesis(x, optimal_wt)
-# 	predictions = [np.argmax(probabilities) + 1 for probabilities in output]
-#
-# 	success_count = 0
-# 	m = x.shape[0]
-# 	for i in range(m):
-# 		prediction_i = predictions[i]
-# 		yi = y[i, 0]
-# 		if yi == prediction_i:
-# 			success_count += 1
-#
-# 	success_rates.append(((success_count / m)*100))
-#
-# best_lambda_index = np.argmin(errors)
-# best_lambda = lambdas[best_lambda_index]
-# min_error = errors[best_lambda_index]
-# print("best_lambda %s, min_error %s" % (best_lambda, min_error))
-# plt.plot(lambdas, errors, c="r")
-# plt.show()
-# best_lambda_index_by_success_rate = np.argmax(success_rates)
-# best_lambda = lambdas[best_lambda_index_by_success_rate]
-# max_success_rate = success_rates[best_lambda_index_by_success_rate]
-# print("best_lambda %s, max_success_rate %s" % (best_lambda, max_success_rate))
-# plt.plot(lambdas, success_rates, c="r")
-# plt.show()
-#------------        best lambda        ---------
-
-
-
-# ------------        visualize        ---------
-yoh = to_one_hot(y, 10)
-rand_w = [build_randomized_weights(w0.shape), build_randomized_weights(w1.shape)]
-unrolled_w = unroll(rand_w)
-unrolled_optimal_w = optimize.fmin_cg(maxiter=50, f=cost, x0=unrolled_w, fprime=back_propagation, args=(x, yoh, 0.42), disp=True)
-optimal_w = from_unrolled(unrolled_optimal_w, weight_sizes)
-
-optimal_wt = [optimal_w[0].transpose(), optimal_w[1].transpose()]
-output = hypothesis(x, optimal_wt)
-predictions = [np.argmax(probabilities) + 1 for probabilities in output]
-
-success_count = 0
-m = x.shape[0]
-for i in range(m):
-	prediction_i = predictions[i]
-	yi = y[i, 0]
-	if yi == prediction_i:
-		success_count += 1
-print("success rate: %s" % ((success_count / m)*100))
-visualize(optimal_w[0][:, 1:])
-# ------------        visualize        ---------
