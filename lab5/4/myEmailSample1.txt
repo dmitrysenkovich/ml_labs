@@ -1,0 +1,2 @@
+Re: Annotation based auditing fails for annotation properties underneath collection valued subpath
+If you're running into the same issue, please have a look at DATACMNS-1609. Christoph Strobl created a PR for this problem, progress can be found there. Thanks for the PR and linking back to this issue!
