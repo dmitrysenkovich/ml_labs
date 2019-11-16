@@ -6,6 +6,7 @@ from scipy.io import loadmat
 from datetime import timedelta
 import random
 from imageio import imread
+from sklearn.cluster import AgglomerativeClustering
 
 k_means_iterations_count = 50
 algorithm_iterations_count = 10
@@ -80,6 +81,13 @@ def build_compressed_image(centroids, centroid_indices_per_sample):
 		compressed[i] = centroid
 	return compressed.reshape(image_size, image_size, 3)
 
+def compute_centroids(x, centroid_indices_per_sample, K):
+	centroids = np.zeros(shape=(K, 3))
+	for k in range(K):
+		neighbours = pick_centroid_neighbours(x, centroid_indices_per_sample, k)
+		centroids[k] = neighbours.sum(axis=0) / len(neighbours)
+	return centroids
+
 if __name__ == "__main__":
 
 
@@ -107,10 +115,24 @@ if __name__ == "__main__":
 
 
 	# ------------        my image to mat conversion and test         ---------
-	x = imread('my_original.jpg')
-	plot_image(x)
-	best_centroids, best_cost, best_centroid_indices_per_sample = find_best_clusterization(x.reshape((-1, 3)), 16)
-	print('best cost %s' % best_cost)
-	compressed = build_compressed_image(best_centroids, best_centroid_indices_per_sample)
-	plot_image(compressed)
+	# x = imread('my_original.jpg')
+	# plot_image(x)
+	# best_centroids, best_cost, best_centroid_indices_per_sample = find_best_clusterization(x.reshape((-1, 3)), 16)
+	# print('best cost %s' % best_cost)
+	# compressed = build_compressed_image(best_centroids, best_centroid_indices_per_sample)
+	# plot_image(compressed)
 	# ------------        my image to mat conversion and test         ---------
+
+
+
+	# ------------        hierarchical clustering         ---------
+	# https://stackabuse.com/hierarchical-clustering-with-python-and-scikit-learn/
+	K = 16
+	x = imread('my_original.jpg').reshape(-1, 3)
+	cluster = AgglomerativeClustering(n_clusters=K, affinity='euclidean', linkage='ward')
+	cluster.fit_predict(x)
+	centroid_indices_per_sample = cluster.labels_
+	centroids = compute_centroids(x, centroid_indices_per_sample, K)
+	compressed = build_compressed_image(centroids, centroid_indices_per_sample)
+	plot_image(compressed)
+	# ------------        hierarchical clustering         ---------
