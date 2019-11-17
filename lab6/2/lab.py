@@ -3,6 +3,7 @@ import numpy as np
 from datetime import timedelta
 import scipy.optimize as optimize
 from scipy.io import loadmat
+from scipy.io import savemat
 from datetime import timedelta
 import random
 from imageio import imread
@@ -109,6 +110,7 @@ if __name__ == "__main__":
 	# print('best cost %s' % best_cost)
 	# compressed = build_compressed_image(best_centroids, best_centroid_indices_per_sample)
 	# plot_image(compressed)
+	#savemat('compressed.mat', {'X': compressed}) # prepare data for 7.3 lab
 	# best cost 467.1932244020061
 	# ------------        best clusterization         ---------
 
