@@ -7,19 +7,10 @@ from datetime import timedelta
 def plot_data(x, c='b'):
 	plt.scatter(x[:, 0], x[:, 1], c=c)
 
-def plot_eigenvectors(u, x):
-	min_x = np.min(x[:, 0]) - 0.5
-	max_x = np.max(x[:, 0]) + 0.5
-
-	k1 = u[0][1] / u[0][0]
-	ax1 = np.linspace(min_x, max_x, 100)
-	ay1 = k1*ax1
-	plt.plot(ax1, ay1, c='m')
-
-	k2 = u[1][1] / u[1][0]
-	ax2 = np.linspace(min_x, max_x, 100)
-	ay2 = k2*ax2
-	plt.plot(ax2, ay2, c='m')
+def plot_eigenvectors(u):
+	ut = u.T
+	plt.arrow(0, 0, ut[0][0], ut[0][1], head_width=0.05, head_length=0.1, color='m')
+	plt.arrow(0, 0, ut[1][0], ut[1][1], head_width=0.05, head_length=0.1, color='m')
 
 def plot_projections(normalized_x, x_approximated):
 	for i in range(len(normalized_x)):
@@ -96,9 +87,9 @@ if __name__ == "__main__":
 
 	# ------------        svd. u and data         ---------
 	u, s, c = np.linalg.svd(normalized_x.T)
-	# plot_data(normalized_x)
-	# plot_eigenvectors(u, normalized_x)
-	# plt.show()
+	plot_data(normalized_x)
+	plot_eigenvectors(u)
+	plt.show()
 	# ------------        svd. u and data         ---------
 
 
@@ -109,7 +100,7 @@ if __name__ == "__main__":
 	x_approximated = recover_data(z, u_reduce)
 	plot_data(normalized_x)
 	plot_data(x_approximated, c='r')
-	plot_eigenvectors(u, normalized_x)
+	plot_eigenvectors(u)
 	plot_projections(normalized_x, x_approximated)
 	plt.show()
 	# ------------        normalized and recovered data         ---------
