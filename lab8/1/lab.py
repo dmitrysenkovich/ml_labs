@@ -26,7 +26,7 @@ def f_score(res):
 	precision = res[0][0] / (predicted_positive_total if predicted_positive_total > 0 else 1)
 	actual_positive_total = res[0][0] + res[1][0]
 	recall = res[0][0] / (actual_positive_total if actual_positive_total > 0 else 1)
-	return 2*precision*recall/(precision + recall)
+	return 2*precision*recall/((precision + recall) if (precision + recall) > 0 else 1)
 
 def plot_distribution(means, stds):
 	x1, x2 = np.meshgrid(np.arange(0, 30, 0.1), np.arange(0, 30, 0.1))
@@ -44,18 +44,20 @@ def estimate(x):
 	return means, stds
 
 def find_best_epsilon(x_val, y_val, means, stds):
-	epsilons = np.linspace(7.9018e-04, 7.9018e-04, 1)
 	best_f_score = 0
 	best_epsilon = -1
+	p_values = [p(x_val[i], means, stds) for i in range(len(x_val))]
+	step = (np.max(p_values) - np.min(p_values)) / 1000
+	epsilons = np.arange(np.min(p_values), np.max(p_values), step)
 	for epsilon in epsilons:
 		true_positives = 0.0
 		false_positives = 0.0
 		false_negatives = 0.0
 		true_negatives = 0.0
+		is_outliers = p_values < epsilon
 		for i in range(len(x_val)):
-			xi = x_val[i]
 			yi = y_val[i, 0]
-			is_positive = 1 if is_outlier(xi, means, stds, epsilon) else 0
+			is_positive = 1 if is_outliers[i] else 0
 			if is_positive == 1 and yi == 1:
 				true_positives += 1
 			elif is_positive == 1 and yi == 0:
@@ -112,8 +114,7 @@ if __name__ == "__main__":
 
 	# ------------        estimate x         ---------
 	means, stds = estimate(x)
-	#print(p(np.array([13, 16]).reshape(-1, 1), means, stds))
-	# ------------        estimate x         ---------
+# ------------        estimate x         ---------
 
 
 
