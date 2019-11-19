@@ -4,6 +4,7 @@ from scipy.io import loadmat
 import math
 import scipy.optimize as optimize
 import re
+from scipy.sparse.linalg import svds
 
 def calculate_error(x, theta, r, y):
 	return np.multiply(x.dot(theta.T), r) - y
@@ -42,6 +43,15 @@ def normalize(y, r):
 
 	return y_normalized, y_mean
 
+def predict_svd(u, s, vt, y_mean):
+	return predict_svd_no_mean(u, s, vt) + y_mean.reshape(-1, 1)
+
+def predict_svd_no_mean(u, s, vt):
+	return u.dot(s).dot(vt)
+
+def rmse(y, u, s, vt):
+	return (np.sum((predict_svd_no_mean(u, s, vt) - y)**2) / y.shape[0])**0.5
+
 if __name__ == "__main__":
 
 
@@ -78,45 +88,77 @@ if __name__ == "__main__":
 
 
 
-	# ------------        initialize parameters         ---------
-	x = np.random.randn(y.shape[0], features_count)
-	theta = np.random.randn(y.shape[1], features_count)
-	params0 = np.concatenate([x.ravel(), theta.ravel()])
-	print(cost(params0, y, r, features_count, 0.1))
-	# ------------        initialize parameters         ---------
-
-
-
-	# ------------        run optimization         ---------
-	y_normalized, y_mean = normalize(y, r)
-	optimal_params_unrolled = optimize.minimize(fun=cost, x0=params0, args=(y_normalized, r, features_count, 0.1), method='TNC', jac=gradient, options={'maxiter': 10000, 'disp': True})
-	movies_count = y.shape[0]
-	users_count = y.shape[1]
-	optimal_x = np.reshape(optimal_params_unrolled.x[:movies_count * features_count], (movies_count, features_count))
-	optimal_theta = np.reshape(optimal_params_unrolled.x[movies_count * features_count:], (users_count, features_count))
-	# ------------        run optimization         ---------
-
-
-
-	# ------------        my rating prediction         ---------
-	my_theta = optimal_theta[943, :]
-	star_track_x = optimal_x[229, :]
-	batman_x = optimal_x[402, :]
-	print('Star Trek IV: The Voyage Home rating prediction: %s' % star_track_x.dot(my_theta.T))
-	print('Batman rating prediction: %s' % batman_x.dot(my_theta.T))
-	# ------------        my rating prediction         ---------
-
-
-	# ------------        my recommendations prediction         ---------
+	# ------------        load movies         ---------
 	movies = []
 	with open('movie_ids.txt', 'r', encoding='iso-8859-1') as movies_file:
 		for line in movies_file:
 			movies.append(re.match(r"([0-9]+) ((.)+)", line, re.I).groups()[1])
+	# ------------        load movies         ---------
+
+
+
+	# # ------------        initialize parameters         ---------
+	# x = np.random.randn(y.shape[0], features_count)
+	# theta = np.random.randn(y.shape[1], features_count)
+	# params0 = np.concatenate([x.ravel(), theta.ravel()])
+	# print(cost(params0, y, r, features_count, 0.1))
+	# # ------------        initialize parameters         ---------
+	#
+	#
+	#
+	# # ------------        run optimization         ---------
+	# y_normalized, y_mean = normalize(y, r)
+	# optimal_params_unrolled = optimize.minimize(fun=cost, x0=params0, args=(y_normalized, r, features_count, 0.1), method='TNC', jac=gradient, options={'maxiter': 10000, 'disp': True})
+	# movies_count = y.shape[0]
+	# users_count = y.shape[1]
+	# optimal_x = np.reshape(optimal_params_unrolled.x[:movies_count * features_count], (movies_count, features_count))
+	# optimal_theta = np.reshape(optimal_params_unrolled.x[movies_count * features_count:], (users_count, features_count))
+	# # ------------        run optimization         ---------
+	#
+	#
+	#
+	# # ------------        my rating prediction         ---------
+	# my_theta = optimal_theta[943, :]
+	# star_track_x = optimal_x[229, :]
+	# batman_x = optimal_x[402, :]
+	# print('Star Trek IV: The Voyage Homex rating prediction: %s' % star_track_x.dot(my_theta.T))
+	# print('Batman rating prediction: %s' % batman_x.dot(my_theta.T))
+	# # ------------        my rating prediction         ---------
+	#
+	#
+	# # ------------        my recommendations prediction         ---------
+	# recommendations_count_to_show = 10
+	# p = optimal_x.dot(my_theta.T)
+	# my_rating_prediction = (p.reshape(-1, 1) + y_mean).flatten()
+	# max_ratings = my_rating_prediction.argsort()[::-1][:recommendations_count_to_show]
+	# print('My recommendations:')
+	# for movie_index in max_ratings:
+	# 	print('Movie: %s' % movies[movie_index])
+	# # ------------        my recommendations prediction         ---------
+
+
+
+	# ------------        leaning using svd         ---------
+	# https://beckernick.github.io/matrix-factorization-recommender/
+	y = y.T
+	r = r.T
+	y_normalized, y_mean = normalize(y, r)
+
+	best_k = 50
+	for k in range(2, 100):
+		u_reduced, s_reduced, vt_reduced = svds(y_normalized, k = k)
+		s_reduced = np.diag(s_reduced)
+		print(k)
+		print(rmse(y_normalized, u_reduced, s_reduced, vt_reduced))
+
+	u, s, vt = svds(y_normalized, k = best_k)
+	s = np.diag(s)
+	all_user_predicted_ratings = predict_svd(u, s, vt, y_mean)
+
 	recommendations_count_to_show = 10
-	p = optimal_x.dot(my_theta.T)
-	my_rating_prediction = (p.reshape(-1, 1) + y_mean).flatten()
+	my_rating_prediction = all_user_predicted_ratings[943]
 	max_ratings = my_rating_prediction.argsort()[::-1][:recommendations_count_to_show]
 	print('My recommendations:')
 	for movie_index in max_ratings:
 		print('Movie: %s' % movies[movie_index])
-	# ------------        my recommendations prediction         ---------
+	# ------------        leaning using svd         ---------
