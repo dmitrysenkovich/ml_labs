@@ -91,6 +91,20 @@ def normalize_x(x):
 def is_n(classifier, xi):
 	return sigmoid(classifier.dot(xi.reshape(-1, 1)))[0].item(0)
 
+def predict(x, classifiers):
+	m = x.shape[0]
+	predictions = [0] * m
+	classifier_to_prediction = [10, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+	for i in range(m):
+		xi = x[i]
+		probabilities = [0] * 10
+		for k in range(10):
+			classifier = classifiers[k]
+			probabilities[k] = is_n(classifier, xi)
+		prediction = classifier_to_prediction[np.argmax(probabilities)]
+		predictions[i] = prediction
+	return predictions
+
 # ------------        read data         ---------
 data = loadmat("ex2data3.mat")
 x = np.array(data['X'])
@@ -114,7 +128,7 @@ target_t = target.transpose()
 # i = 0
 # for j in range(target.shape[0]):
 # 	if target[j] != t:
-# 		axs[i].imshow(x[j].reshape(20, 20), cmap='hot')
+# 		axs[i].imshow(x[j].reshape(20, 20, order='F'), cmap='hot')
 # 		axs[i].axis("off")
 # 		i += 1
 # 		t = target[j]
@@ -153,26 +167,16 @@ for i in range(10):
 		x0=w0,
 		fprime=gradient_scipy,
 		args=(x, y, l),
-		maxiter=100
+		maxiter=50
 	))
 # ------------        with scipy      ---------
 
 
 # ------------        check classifiers         ---------
+predictions = predict(x, classifiers)
 m = x.shape[0]
-predictions = [0]*m
-classifier_to_prediction = [10, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-for i in range(m):
-	xi = x[i]
-	probabilities = [0]*10
-	for k in range(10):
-		classifier = classifiers[k]
-		probabilities[k] = is_n(classifier, xi)
-	prediction = classifier_to_prediction[np.argmax(probabilities)]
-	predictions[i] = prediction
-
 success_count = 0
-for i in range(m):
+for i in range(x.shape[0]):
 	prediction_i = predictions[i]
 	target_i = target[i].item(0)
 	success_count += 1 if target_i == prediction_i else 0

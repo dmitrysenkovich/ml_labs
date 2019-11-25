@@ -94,7 +94,10 @@ def optimize_scipy(x, y, algorithm):
 	y = np.array(y)
 	mean_res, diff_res = normalize_x(x)
 	o = np.zeros((3, 1))
+	start = timer()
 	Result = optimize.minimize(fun=j_scipy, x0=o, args=(x, y), method=algorithm, jac=j_o_der_scipy)
+	end = timer()
+	print(timedelta(seconds=end - start))
 	o = Result.x
 	print("o %s " % o)
 	colors = ['green' if val else 'red' for val in y]

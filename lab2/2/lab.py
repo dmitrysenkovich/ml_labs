@@ -8,10 +8,8 @@ from datetime import timedelta
 import scipy.optimize as optimize
 from sympy import *
 
-# at first max error is 0.45 starting with l = 1 max errors are 0.53, 0.6482157015, 0.6864838338726167, 0.6923102938884204
 alpha = 0.001
-l = 1000
-max_error = 0.6923102938884204
+l = 0.1
 o_to_pow = []
 hypothesis_x = []
 hypothesis_x_transposed = []
@@ -53,14 +51,13 @@ def update_o(m, ot):
 def gd():
 	o = np.matrix([0.0] * 28)
 	ot = o.transpose()
-	error = 1000000000000000000
 	its = 0
 	m = len(hypothesis_x)
 	print('m %s' % m)
 	its_hist = []
 	err_hist = []
 	print(j(m, ot))
-	while error > max_error:
+	while its < 160000:
 		ot = update_o(m, ot)
 		error = j(m, ot)
 		its += 1
@@ -71,7 +68,6 @@ def gd():
 			print(error)
 
 	print('its %s' % its)
-	print('error %s' % error)
 	return ot, its, its_hist, err_hist
 
 def normalize_x(x):
@@ -122,6 +118,9 @@ def calc_hypothesis_x_row(xi):
 		row.append((xi[0]**i)*(xi[1]**j))
 	return row
 
+def predict(hypothesis_x, o):
+	return sigmoid(hypothesis_x.dot(o)) >= 0.5
+
 # ------------        read data         ---------
 x = []
 y = []
@@ -159,13 +158,13 @@ hypothesis_x_transposed = hypothesis_x.transpose()
 
 # ------------        gm solution      ---------
 # ------------        time elapsed: 0:00:34.703448s ------
-start = timer()
-o, its, its_hist, err_hist = gd()
-end = timer()
-print(timedelta(seconds=end-start))
-np.set_printoptions(suppress=True)
-print('its %s' % its)
-print('o %s' % o)
+# start = timer()
+# o, its, its_hist, err_hist = gd()
+# end = timer()
+# print(timedelta(seconds=end-start))
+# np.set_printoptions(suppress=True)
+# print('its %s' % its)
+# print('o %s' % o)
 # ------------        gm solution         ---------
 
 
@@ -175,24 +174,24 @@ print('o %s' % o)
 
 
 # ------------        scipy   Nelder-Mead      ---------
-# o = optimize_scipy('Nelder-Mead')
+o = optimize_scipy('Nelder-Mead')
 # ------------        scipy    Nelder-Mead     ---------
 
 
 
 # ------------        plot predictions vs initial data     ---------
-t = np.linspace(-1, 1.25, 100)
-asd = []
+t = np.linspace(-1, 1.25, 300)
+temp = []
 for tt in t:
 	for ttt in t:
-		asd.append([tt, ttt])
-t = np.array(asd)
+		temp.append([tt, ttt])
+t = np.array(temp)
 hypothesis_x = []
 calc_hypothesis_x(t)
 hypothesis_x = np.array(hypothesis_x)
-values = sigmoid(hypothesis_x.dot(o)) >= 0.5
-colors_v = ['blue' if val else 'yellow' for val in values]
-plt.scatter(t[:,0], t[:,1], c=colors_v)
+values = predict(hypothesis_x, o)
+colors_v = ['#90ee90' if val else '#ff9185' for val in values]
+plt.scatter(t[:,0], t[:,1], c=colors_v, s = 3)
 colors = ['green' if val else 'red' for val in y]
 plt.scatter(x[:,0], x[:,1], c=colors)
 plt.show()
