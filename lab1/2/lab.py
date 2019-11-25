@@ -171,24 +171,27 @@ with open('ex1data2.txt', 'r') as data_file:
 
 # ------------        gm solution         ---------
 # ------------        time elapsed: 0:00:34.703448s ------
-#normalize_x(x)
-#start = timer()
-#o, its, its_hist, err_hist = gd(x, y)
-#end = timer()
-#print(timedelta(seconds=end-start))
-#print('its %s' % its)
-#print('o %s' % o)
+# normalize_x(x)
+# start = timer()
+# o, its, its_hist, err_hist = gd(x, y)
+# end = timer()
+# print(timedelta(seconds=end-start))
+# print('its %s' % its)
+# print('o %s' % o)
 # ------------        gm solution         ---------
 
 
 
 
 # ------------        normal equation solution         ---------
-#x_np = np.matrix(x)
-#y_np = np.matrix(y)
-#normalize_x_np(x_np)
-#o = np.linalg.inv(x_np.transpose() * x_np) * (x_np.transpose()) * y_np.transpose()
-#print(o)
+x_np = np.matrix(x)
+y_np = np.matrix(y)
+normalize_x_np(x_np)
+start = timer()
+o = np.linalg.inv(x_np.transpose() * x_np) * (x_np.transpose()) * y_np.transpose()
+end = timer()
+print(timedelta(seconds=end-start))
+print(o)
 # ------------        normal equation solution         ---------
 
 
