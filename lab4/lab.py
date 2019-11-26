@@ -56,8 +56,8 @@ def cost(unrolled_weights, x, y, l):
 
 	return np.sum(cost_first_part + cost_second_part) / -m + regularization_part(wt, m, l)
 
-def activation_derivative(al):
-	return np.multiply(al, (1 - al))
+def activation_derivative(a):
+	return np.multiply(a, (1 - a))
 
 def build_randomized_weights(size):
 	eps = 1
@@ -145,7 +145,7 @@ weights_data = loadmat("ex4weights.mat")
 w0 = weights_data['Theta1']
 w1 = weights_data['Theta2']
 wt = [w0.transpose(), w1.transpose()]
-# number of hidden layers: 2
+# number of hidden layers: 1
 # size of the first layer (input layer): 400 + 1
 # size of the second layer (1st hidden): 25 + 1
 # size of the third layer (output layer): 10
@@ -264,23 +264,23 @@ wt = [w0.transpose(), w1.transpose()]
 
 
 # ------------        visualize        ---------
-yoh = to_one_hot(y, 10)
-rand_w = [build_randomized_weights(w0.shape), build_randomized_weights(w1.shape)]
-unrolled_w = unroll(rand_w)
-unrolled_optimal_w = optimize.fmin_cg(maxiter=50, f=cost, x0=unrolled_w, fprime=back_propagation, args=(x, yoh, 0.42), disp=True)
-optimal_w = from_unrolled(unrolled_optimal_w, weight_sizes)
-
-optimal_wt = [optimal_w[0].transpose(), optimal_w[1].transpose()]
-output = hypothesis(x, optimal_wt)
-predictions = [np.argmax(probabilities) + 1 for probabilities in output]
-
-success_count = 0
-m = x.shape[0]
-for i in range(m):
-	prediction_i = predictions[i]
-	yi = y[i, 0]
-	if yi == prediction_i:
-		success_count += 1
-print("success rate: %s" % ((success_count / m)*100))
-visualize(optimal_w[0][:, 1:])
+# yoh = to_one_hot(y, 10)
+# rand_w = [build_randomized_weights(w0.shape), build_randomized_weights(w1.shape)]
+# unrolled_w = unroll(rand_w)
+# unrolled_optimal_w = optimize.fmin_cg(maxiter=50, f=cost, x0=unrolled_w, fprime=back_propagation, args=(x, yoh, 0.42), disp=True)
+# optimal_w = from_unrolled(unrolled_optimal_w, weight_sizes)
+#
+# optimal_wt = [optimal_w[0].transpose(), optimal_w[1].transpose()]
+# output = hypothesis(x, optimal_wt)
+# predictions = [np.argmax(probabilities) + 1 for probabilities in output]
+#
+# success_count = 0
+# m = x.shape[0]
+# for i in range(m):
+# 	prediction_i = predictions[i]
+# 	yi = y[i, 0]
+# 	if yi == prediction_i:
+# 		success_count += 1
+# print("success rate: %s" % ((success_count / m)*100))
+# visualize(optimal_w[0][:, 1:])
 # ------------        visualize        ---------
