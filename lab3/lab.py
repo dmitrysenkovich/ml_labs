@@ -1,15 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
-from timeit import default_timer as timer
-from datetime import timedelta
 import scipy.optimize as optimize
 from sympy import *
 from scipy.io import loadmat
 
-alpha = 0.0001
+alpha = 0.001
 l = 0
 
 def hypothesis(x, wt):
@@ -21,11 +16,11 @@ def cost(wt, x, y):
 	hy_diff = calculated_hypothesis - y.transpose()
 	return (hy_diff.transpose().dot(hy_diff))[0].item(0) / (2 * m) + np.sum(np.power(wt[1:], 2))*l/(2*m)
 
-def cost_scipy(w, x, y, l):
+def cost_scipy(w, x, y, l = 0):
 	calculated_hypothesis = hypothesis(x, w.reshape(-1, 1))
-	m = x.shape[0]
+	m = y.shape[1]
 	hy_diff = calculated_hypothesis - y.transpose()
-	return (hy_diff.transpose().dot(hy_diff))[0].item(0) / (2 * m) + np.sum(np.power(w, 2))*l/(2*m)
+	return (hy_diff.transpose().dot(hy_diff))[0].item(0) / (2 * m) + np.sum(np.power(w[1:], 2))*l/(2*m)
 
 def gradient(wt, x, y):
 	calculated_hypothesis = hypothesis(x, wt)
@@ -35,9 +30,9 @@ def gradient(wt, x, y):
 	xt = x.transpose()
 	return ((xt.dot(calculated_hypothesis - y.transpose())) / m) + wt_restricted*l/m
 
-def gradient_scipy(w, x, y, l):
+def gradient_scipy(w, x, y, l = 0):
 	calculated_hypothesis = hypothesis(x, w.reshape(-1, 1))
-	m = x.shape[0]
+	m = y.shape[1]
 	w_restricted = np.copy(w).reshape(-1, 1)
 	w_restricted[0] = 0
 	xt = x.transpose()
@@ -60,33 +55,21 @@ def gradient_descent(x, y):
 			print('error %s' % error)
 			its_hist.append(its)
 			err_hist.append(error)
-		if its % 10000000 == 0:
+		if its % 100000 == 0:
 			print('error %s' % error)
 			return wt, its, its_hist, err_hist
 
 def normalize_x(x):
-	dim = x[0].size
-	m = len(x)
-	mean_res = [0] * (dim - 1)
-	diff_res = [0] * (dim - 1)
-	for dimi in range(1, dim):
-		sum_dimi = 0.0
-		min_dimi = float('inf')
-		max_dimi = float('-inf')
-		for i in range(m):
-			sum_dimi += x[i].item(dimi)
-			if x[i].item(dimi) < min_dimi:
-				min_dimi = x[i].item(dimi)
-			if x[i].item(dimi) > max_dimi:
-				max_dimi = x[i].item(dimi)
-		if (sum == 0) or (min_dimi == max_dimi):
-			continue
-		mean = sum_dimi / m
-		mean_res[dimi - 1] = mean
-		for i in range(m):
-			x[i].itemset(dimi, ((x[i].item(dimi) - mean) / (max_dimi - min_dimi)))
-		diff_res[dimi - 1] = max_dimi - min_dimi
-	return mean_res, diff_res
+	means = x.mean(axis=0)
+	stds = np.std(x, axis=0, ddof=1)
+	normalized_x = (x - means) / stds
+	normalized_x = np.hstack((np.ones((len(normalized_x), 1)), normalized_x))
+	return normalized_x, means, stds
+
+def normalize_x_with_params(x, means, stds):
+	normalized_x = (x - means) / stds
+	normalized_x = np.hstack((np.ones((len(normalized_x), 1)), normalized_x))
+	return normalized_x
 
 def predict(x, w):
 	return x.dot(w)
@@ -95,11 +78,11 @@ def build_polynomyial_x(initial_x, degree):
 	polynomial_x = np.zeros(shape=(len(initial_x), degree))
 	for i in range(0, degree):
 		polynomial_x[:, i] = initial_x.squeeze() ** (i + 1)
-	return np.column_stack([[1]*(polynomial_x.shape[0]), polynomial_x])
+	return polynomial_x
 
 def hypothesis_polynomial_features(data, y, val_y, l):
 	pol_x = build_polynomyial_x(np.array(data['X']), 8)
-	mean_res, diff_res = normalize_x(pol_x)
+	pol_x, mean_res, diff_res = normalize_x(pol_x)
 	w = optimize.fmin_cg(
 		f=cost_scipy,
 		x0=np.zeros(pol_x.shape[1]),
@@ -110,17 +93,13 @@ def hypothesis_polynomial_features(data, y, val_y, l):
 
 	pol_val_x = build_polynomyial_x(np.array(data['Xval']), 8)
 	# normalize according to X
-	mean_res = np.array(mean_res).reshape(-1, 1).transpose()
-	mean_res = np.column_stack([[0] * (mean_res.shape[0]), mean_res])
-	diff_res = np.array(diff_res).reshape(-1, 1).transpose()
-	diff_res = np.column_stack([[1] * (diff_res.shape[0]), diff_res])
-	pol_val_x = (pol_val_x - mean_res) / diff_res
+	pol_val_x = normalize_x_with_params(pol_val_x, mean_res, diff_res)
 
-	return cost(w, pol_val_x, val_y)
+	return cost_scipy(w, pol_val_x, val_y)
 
 def build_polynomial_approximation(data, y, l):
 	pol_x = build_polynomyial_x(np.array(data['X']), 8)
-	mean_res, diff_res = normalize_x(pol_x)
+	pol_x, mean_res, diff_res = normalize_x(pol_x)
 	w = optimize.fmin_cg(
 		f=cost_scipy,
 		x0=np.zeros(pol_x.shape[1]),
@@ -128,23 +107,20 @@ def build_polynomial_approximation(data, y, l):
 		args=(pol_x, y, l),
 		maxiter=1000
 	).reshape(-1, 1)
+
 	plt.scatter(pol_x[:, 1:2], np.array(data['y']))
 	x_ax = np.linspace(min(np.array(data['X'])) - 5, max(np.array(data['X'])) + 5, 1000)
 	# normalize according to X
-	mean_res = np.array(mean_res).reshape(-1, 1).transpose()
-	mean_res = np.column_stack([[0]*(mean_res.shape[0]), mean_res])
-	diff_res = np.array(diff_res).reshape(-1, 1).transpose()
-	diff_res = np.column_stack([[1]*(diff_res.shape[0]), diff_res])
 	x_ax_polynomial = build_polynomyial_x(x_ax, 8)
-	x_ax_polynomial = (x_ax_polynomial - mean_res) / diff_res
+	x_ax_polynomial = normalize_x_with_params(x_ax_polynomial, mean_res, diff_res)
 	predictions = predict(x_ax_polynomial, w)
-	x_ax = (x_ax - mean_res[0, 1]) / diff_res[0, 1]
+	x_ax = (x_ax - mean_res[0]) / diff_res[0]
 	plt.plot(x_ax, predictions, linewidth=2)
 	plt.show()
 
 def build_polynomial_approximation_for_test_set(data, y, l):
 	pol_x = build_polynomyial_x(np.array(data['X']), 8)
-	mean_res, diff_res = normalize_x(pol_x)
+	pol_x, mean_res, diff_res = normalize_x(pol_x)
 	w = optimize.fmin_cg(
 		f=cost_scipy,
 		x0=np.zeros(pol_x.shape[1]),
@@ -153,35 +129,29 @@ def build_polynomial_approximation_for_test_set(data, y, l):
 		maxiter=1000
 	).reshape(-1, 1)
 
-	mean_res = np.array(mean_res).reshape(-1, 1).transpose()
-	mean_res = np.column_stack([[0]*(mean_res.shape[0]), mean_res])
-	diff_res = np.array(diff_res).reshape(-1, 1).transpose()
-	diff_res = np.column_stack([[1]*(diff_res.shape[0]), diff_res])
-
 	# test set plot
-	test_x_ax = (np.array(data['Xtest']) - mean_res[0, 1]) / diff_res[0, 1]
+	test_x_ax = (np.array(data['Xtest']) - mean_res[0]) / diff_res[0]
 	plt.scatter(test_x_ax, np.array(data['ytest']))
 
 	# predictions plot
 	x_ax = np.linspace(min(np.array(data['Xtest'])) - 5, max(np.array(data['Xtest'])) + 5, 1000)
 	x_ax_polynomial = build_polynomyial_x(x_ax, 8)
-	x_ax_polynomial = (x_ax_polynomial - mean_res) / diff_res
+	x_ax_polynomial = normalize_x_with_params(x_ax_polynomial, mean_res, diff_res)
 	predictions = predict(x_ax_polynomial, w)
-	x_ax = (x_ax - mean_res[0, 1]) / diff_res[0, 1]
+	x_ax = (x_ax - mean_res[0]) / diff_res[0]
 	plt.plot(x_ax, predictions, linewidth=2)
 	plt.show()
+
+	x_test_polynomial = build_polynomyial_x(np.array(data['Xtest']), 8)
+	x_test_polynomial = normalize_x_with_params(x_test_polynomial, mean_res, diff_res)
+	print(cost_scipy(w, x_test_polynomial, np.array(data['ytest'].T)))
 
 def build_polynomial_learning_curves(data, y, val_y, l):
 	m = x.shape[0]
 	pol_x = build_polynomyial_x(np.array(data['X']), 8)
-	mean_res, diff_res = normalize_x(pol_x)
+	pol_x, means, stds = normalize_x(pol_x)
 	pol_val_x = build_polynomyial_x(np.array(data['Xval']), 8)
-	# normalize according to X
-	mean_res = np.array(mean_res).reshape(-1, 1).transpose()
-	mean_res = np.column_stack([[0] * (mean_res.shape[0]), mean_res])
-	diff_res = np.array(diff_res).reshape(-1, 1).transpose()
-	diff_res = np.column_stack([[1] * (diff_res.shape[0]), diff_res])
-	pol_val_x = (pol_val_x - mean_res) / diff_res
+	pol_val_x = normalize_x_with_params(pol_val_x, means, stds)
 	x_errors = []
 	val_errors = []
 	for i in range(2, m + 1):
@@ -194,8 +164,8 @@ def build_polynomial_learning_curves(data, y, val_y, l):
 			fprime=gradient_scipy,
 			args=(pol_xi, yi, l)
 		)
-		x_errors.append(cost(w, pol_xi, yi))
-		val_errors.append(cost(w, pol_val_x, val_y))
+		x_errors.append(cost_scipy(w, pol_xi, yi))
+		val_errors.append(cost_scipy(w, pol_val_x, val_y))
 	x_ax = [i for i in range(2, m + 1)]
 	plt.plot(x_ax, x_errors, c="g")
 	plt.plot(x_ax, val_errors, c="r")
@@ -268,19 +238,18 @@ test_y = test_y.transpose()
 # m = x.shape[0]
 # x_errors = []
 # val_errors = []
-# asd = []
 # for i in range(2, m+1):
 # 	xi = x[0:i]
 # 	yi = y[:, 0:i]
 # 	w0 = np.array([0.0] * x.shape[1])
-# 	asd = w = optimize.fmin_cg(
+# 	w = optimize.fmin_cg(
 # 		f=cost_scipy,
 # 		x0=w0,
 # 		fprime=gradient_scipy,
 # 		args=(xi, yi, l)
 # 	)
-# 	x_errors.append(cost(w, xi, yi))
-# 	val_errors.append(cost(w, val_x, val_y))
+# 	x_errors.append(cost_scipy(w, xi, yi))
+# 	val_errors.append(cost_scipy(w, val_x, val_y))
 # x_ax = [i for i in range(2, m+1)]
 # plt.plot(x_ax, x_errors, c="g")
 # plt.plot(x_ax, val_errors, c="r")
@@ -295,22 +264,18 @@ test_y = test_y.transpose()
 # ------------        polynomial approximation        ---------
 # l = 0
 # pol_x = build_polynomyial_x(np.array(data['X']), 8)
-# mean_res, diff_res = normalize_x(pol_x)
+# pol_x, mean_res, diff_res = normalize_x(pol_x)
 # w, its, its_hist, err_hist = gradient_descent(pol_x, y)
 # plt.scatter(pol_x[:, 1:2], np.array(data['y']))
 # x_ax = np.linspace(min(np.array(data['X'])) - 5, max(np.array(data['X'])) + 5, 1000)
 # # normalize according to X
-# mean_res = np.array(mean_res).reshape(-1, 1).transpose()
-# mean_res = np.column_stack([[0]*(mean_res.shape[0]), mean_res])
-# diff_res = np.array(diff_res).reshape(-1, 1).transpose()
-# diff_res = np.column_stack([[1]*(diff_res.shape[0]), diff_res])
 # x_ax_polynomial = build_polynomyial_x(x_ax, 8)
-# x_ax_polynomial = (x_ax_polynomial - mean_res) / diff_res
+# x_ax_polynomial = normalize_x_with_params(x_ax_polynomial, mean_res, diff_res)
 # predictions = predict(x_ax_polynomial, w)
-# x_ax = (x_ax - mean_res[0, 1]) / diff_res[0, 1]
+# x_ax = (x_ax - mean_res[0]) / diff_res[0]
 # plt.plot(x_ax, predictions, linewidth=2)
 # plt.show()
-# plt.plot(its_hist, err_hist, 'bo')
+# plt.plot(its_hist, err_hist)
 # plt.show()
 # ------------        polynomial approximation       ---------
 
@@ -331,7 +296,7 @@ test_y = test_y.transpose()
 
 
 # ------------        best lambda        ---------
-# best is 0.034
+# best_lambda 2.972, min_error 3.822768364932697
 # lambdas = np.linspace(0.001, 10, 10000)
 # test_errors = []
 # for l in lambdas:
@@ -347,6 +312,6 @@ test_y = test_y.transpose()
 
 
 # ------------        best lambda approximation        ---------
-l = 0.034
+l = 2.972
 build_polynomial_approximation_for_test_set(data, y, l)
 # ------------        best lambda approximation        ---------
