@@ -1,16 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
-from timeit import default_timer as timer
-from datetime import timedelta
-import scipy.optimize as optimize
-from sympy import *
 from scipy.io import loadmat
-import pandas as pd
 from sklearn.svm import SVC
-from datetime import timedelta
 
 def plot_data(x, y):
 	colors = ['green' if val else 'red' for val in y]
@@ -24,7 +15,7 @@ def plot_nonlinear_decision_boundary(svclassifier, x, y):
 	xx = np.array([(axx, ayy) for axx in ax for ayy in ay])
 
 	xx_predictions = svclassifier.predict(xx)
-	colors = ['blue' if prediction else 'yellow' for prediction in xx_predictions]
+	colors = ['#90ee90' if prediction else '#ff9185' for prediction in xx_predictions]
 	plt.scatter(xx[:, 0], xx[:, 1], c=colors, s = 5)
 
 	plot_data(x, y)

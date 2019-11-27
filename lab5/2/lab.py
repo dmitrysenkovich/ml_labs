@@ -19,15 +19,15 @@ def plot_data(x, y):
 def plot_nonlinear_decision_boundary(svclassifier, x, y, sigma):
 	x_min, x_max = x[:, 0].min(), x[:, 0].max()
 	y_min, y_max = x[:, 1].min(), x[:, 1].max()
-	ax = np.linspace(x_min, x_max, 100)
-	ay = np.linspace(y_min, y_max, 100)
+	ax = np.linspace(x_min, x_max, 300)
+	ay = np.linspace(y_min, y_max, 300)
 	xx = np.array([(axx, ayy) for axx in ax for ayy in ay])
 
 	xx_in_f = to_f_space(xx, x, sigma)
 	xx_predictions = svclassifier.predict(xx_in_f)
 
-	colors = ['blue' if prediction else 'yellow' for prediction in xx_predictions]
-	plt.scatter(xx[:, 0], xx[:, 1], c=colors, s = 10)
+	colors = ['#90ee90' if prediction else '#ff9185' for prediction in xx_predictions]
+	plt.scatter(xx[:, 0], xx[:, 1], c=colors, s = 3)
 
 	plot_data(x, y)
 
@@ -77,11 +77,11 @@ if __name__ == "__main__":
 
 
 	# ------------        svm gaussian kernel c = 1         ---------
-	# sigma = 0.1
-	# f = gaussian_kernel(x, sigma)
-	# svclassifier = SVC(C = 1, kernel = 'linear')
-	# svclassifier.fit(f, y.ravel())
-	# plot_nonlinear_decision_boundary(svclassifier, x, y, sigma)
+	sigma = 0.1
+	f = gaussian_kernel(x, sigma)
+	svclassifier = SVC(C = 1, kernel = 'linear')
+	svclassifier.fit(f, y.ravel())
+	plot_nonlinear_decision_boundary(svclassifier, x, y, sigma)
 	# ------------        svm gaussian kernel c = 100         ---------
 
 
