@@ -10,7 +10,7 @@ def predict(x, trained_trees, weights):
 	return [sum([weight * tree.predict([xi])[0] for tree, weight in zip(trained_trees, weights)]) for xi in x]
 
 
-def gradient_boosting(x, y, trees_count, max_depth, weights):
+def boosting(x, y, trees_count, max_depth, weights):
 	trained_trees = []
 	curr_labels = np.array(y)
 	for _ in range(trees_count):
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 	trees_count = 50
 	max_depth = 5
 	weights = [0.9] * trees_count
-	trained_trees = gradient_boosting(x, y, trees_count, max_depth, weights)
+	trained_trees = boosting(x, y, trees_count, max_depth, weights)
 	print('predictions:')
 	print(predict(x_test, trained_trees, weights))
 	print('rmse: %s' % rmse(x_test, y_test, trained_trees, weights))
@@ -62,7 +62,7 @@ if __name__ == "__main__":
 	trees_count = 50
 	max_depth = 5
 	weights = [(0.9 / (1.0 + i)) for i in range(trees_count)]
-	trained_trees = gradient_boosting(x, y, trees_count, max_depth, weights)
+	trained_trees = boosting(x, y, trees_count, max_depth, weights)
 	print('predictions:')
 	print(predict(x_test, trained_trees, weights))
 	print('rmse: %s' % rmse(x_test, y_test, trained_trees, weights))
