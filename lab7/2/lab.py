@@ -86,7 +86,7 @@ if __name__ == "__main__":
 	# ------------        normalization and svd         ---------
 	normalized_x, means, standard_deviations = normalize_and_scale(x)
 	covariance_matrix = compute_covariance_matrix(normalized_x)
-	u, s, c = np.linalg.svd(normalized_x.T)
+	u, s, c = np.linalg.svd(covariance_matrix)
 	# ------------        normalization and svd         ---------
 
 

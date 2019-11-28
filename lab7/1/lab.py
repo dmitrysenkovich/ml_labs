@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
 
 	# ------------        svd. u and data         ---------
-	u, s, c = np.linalg.svd(normalized_x.T)
+	u, s, c = np.linalg.svd(covariance_matrix)
 	plot_data(normalized_x)
 	plot_eigenvectors(u)
 	plt.show()
